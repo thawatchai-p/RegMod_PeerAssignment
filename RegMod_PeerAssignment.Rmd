@@ -1,0 +1,134 @@
+---
+title: Analysis on the relationship between a set of variables and fuel consumption (miles per gallon) in the automobile industry
+author: "Thawatchai Phakwithoonchai - 1/15/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts=list(width.cutoff = 60), tidy = TRUE)
+```
+
+# Executive Summary  
+The objective of this assignment is to study and perform the analysis based on `mtcar` database in order to determine the responses for the following inquiries:  
+
+*  "Is an automatic or manual transmission better for MPG"  
+*  "Quantify the MPG difference between automatic and manual transmissions"   
+
+The analysis result indicated that **" Automatic transmission caused more fuel consumption (MPG) than manual transmission about 7.2 miles per gallon based on the simple linear model (mpg ~ am). "** However, the simple linear model showed the poor model fit. Multivariable model fit would improve the model quality by adding number of cylinders (cyl), gross horsepower (hp), and weight (wt) into the model.    
+
+# Load the data and libraries  
+The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models). Dataset consists of 32 observations with 11 variables.
+
+# Perform the exploratory data analysis  
+The data correlation can be determined by plotting in order to visualized the effects of transmission type related to the fuel consumption. The plotting result is showed in the *figure01*. The plotting results apparently indicated that manual transmission caused more the average fuel consumption than automatic transmission.  
+
+# Establish the key assumption  
+1. All sample observations is independent and identically distributed (i.i.d.).  
+2. Normal distribution can be verified by:  
+   i) Histogram plot based on transmission type. The plotting results as shown in *figure02* indicated the mtcars dataset tended to follow a normal distribution.  
+   ii) Shapiro-Wilk’s method. It is based on the correlation between the data and the corresponding normal scores. The result indicated that p-value > 0.05; therefore, the distribution of the data are not significantly different from normal distribution. (Normality was valided)  
+3. Variances of fuel consumption are different in terms of transmission type.  
+
+# Statistalcal inference 
+Student t-test was performed to verified the hypothesis whether if any significant difference in the fuel consumption between automatic and manual transmission in the mtcars dataset or not.  
+
+The result indicates the p-value is 0.001374, which < 0.05. Therefore, it could be rejected the null hypothesis or there was an evidence to suggest that **the fuel consumption from automatic transimission was significantly less than from the manual transmission.**  
+
+# Simple linear regression  
+Because the fuel consumption was pertained to transmission type; therefore, the linear model could be fit and determined the inference results.  
+
+However, after the residual analysis was plotted as shown in *figure03*, it was found that the simple linear regression indicated the poor model fit; therefore, model adjustment by multivariable regression was required to improve the model accuracy.  
+
+# Multivariable regression    
+Data correlation was explored by plotting in order to visualized the  correlation of variables. The result indicated that cyl, disp, hp, drat, wt, and vs, may have strong correlation to the fuel consumption as shown in the *figure04*.  
+
+The nested model testing was performed for model selection. The result indicated the model with necessary variable were fit1, fit3 and fit5. Let's eliminate the insignificant variables and test the new model again in order to get a parsimonious explanatory model.
+
+The result indicated that re-fit model (fit5a) should be selected. Furthermore, residual analysis was required by plotting to examine any heteroskedacity between the fitted and residual values; as well as to check for any non-normality as shown in *figure05*. The “Residuals vs Fitted” plot showed that the residuals were homoscedastic, while "Normal Q-Q" plot showed the normally distribution with the exception of a few outliers.  
+
+\newpage
+# Supporting Appendix  
+
+```{r load the data and libraries}
+# Load the data and libraries
+data("mtcars")
+library(ggplot2)
+```
+
+```{r prepare and transform the data}
+# Prepare and transform the data
+str(mtcars)
+mtcars$am.label <- factor(mtcars$am, labels=c("Automatic","Manual"))
+```
+
+
+```{r Figure01 - Explore the data, out.width = "50%", fig.align='center'}
+# Figure01 - Explore the data
+qplot(factor(am), mpg, data = mtcars, main = "Average Fuel Consumption affected by Transmission Type", xlab = "Transmission Type (Automatic = 0, Manual = 1), ", ylab = "Fuel Consumption (Miles per Gallon)") + geom_boxplot(aes(group = am), fill = c("red", "blue")) + theme(plot.title = element_text(hjust = 0.5)) 
+
+```
+
+```{r Figure02 - Explore the data, out.width = "50%", fig.align='center'}
+# Figure02 - Explore the data
+norm.plot <- ggplot(data = mtcars, aes(x = mpg))
+norm.plot + geom_density(color = "darkblue", fill = "lightblue") + facet_grid(. ~ am) + geom_vline(aes(xintercept = mean(mpg)), color = "blue", linetype = "dashed", size = 1) + labs(title = "Density plot of Fuel Consumption", x = "Fuel Consumption (Miles per Gallon)") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r Normality test for data}
+# Normality test for data
+shapiro.test(mtcars$mpg[mtcars$am == 0])
+shapiro.test(mtcars$mpg[mtcars$am == 1])
+```
+
+```{r statistical inference}
+# Statistical inference for transmission type
+t.test(mpg ~ am.label, data = mtcars, paired = FALSE, var.equal = FALSE)
+```
+
+```{r fit the simple linear model}
+# Fit the simple linear model
+fit <- lm(mpg ~ factor(am), data = mtcars)
+summary(fit)
+```
+
+```{r Figure03 - Residual analysis of simple linear regression, out.width = "75%", fig.align='center'}
+# Figure03 - Residual analysis of simple linear regression
+par(mfrow = c(2,2)); plot(fit)
+```
+
+```{r Figure04 - Pair plot of dataset, out.width = "75%", fig.align='center'}
+# Figure04 - Pair plot of dataset
+pairs(mpg ~ ., data = mtcars)
+```
+
+```{r determine the correlation of variables}
+# Determine the correlation of variable
+mtcars$am.label <- NULL
+cor(mtcars)[1,]
+```
+
+```{r nested model testing}
+# Nested model testing
+fit0 <- lm(mpg ~ am, data = mtcars)
+fit1 <- update(fit0, mpg ~ am+cyl, data = mtcars)
+fit2 <- update(fit0, mpg ~ am+cyl+disp, data = mtcars)
+fit3 <- update(fit0, mpg ~ am+cyl+disp+hp, data = mtcars)
+fit4 <- update(fit0, mpg ~ am+cyl+disp+hp+drat, data = mtcars)
+fit5 <- update(fit0, mpg ~ am+cyl+disp+hp+drat+wt, data = mtcars)
+fit6 <- update(fit0, mpg ~ am+cyl+disp+hp+drat+wt+vs, data = mtcars)
+anova(fit0, fit1, fit2, fit3, fit4, fit5, fit6)
+```
+
+```{r nested re-model testing}
+# Nested re-model testing
+fit3a <- update(fit0, mpg ~ am+cyl+hp, data = mtcars)
+fit5a <- update(fit0, mpg ~ am+cyl+hp+wt, data = mtcars)
+anova(fit0, fit1, fit3a, fit5a)
+```
+
+```{r Figure05 - Residual analysis of multivariable linear regression, out.width = "75%",  fig.align='center'}
+# Figure05 - Residual analysis of multivariable linear regression
+par(mfrow = c(2,2)); plot(fit5a)
+```
